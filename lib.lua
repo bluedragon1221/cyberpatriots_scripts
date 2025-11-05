@@ -46,4 +46,19 @@ function M.log(command, msg)
   end
 end
 
+function M.read_file_to_lines(f)
+  local file = io.open(f, "r")
+  if file then
+    local lines = {}
+    while true do
+      local line = file:read("*l")
+      if line then table.insert(lines, line) else break end
+    end
+    file:close()
+    return lines
+  else
+    error("Failed to read file: "..f)
+  end
+end
+
 return M

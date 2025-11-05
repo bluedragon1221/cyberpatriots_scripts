@@ -1,0 +1,38 @@
+local M = {}
+
+local function log_kill_processes(cmd)
+  local quoted = cmd:gsub("'", "'\\''")
+  local f = io.popen("pgrep -af '"..quoted.."''")
+
+  local pids = {}
+  for line in f:lines() do
+    local pid, full = line:match("^(%d+)%s+(.+)$")
+    if pid then
+      table.insert(pids, pid)
+      lib.log("kill "..pid, "Kill suspicious process: pid "..pid)
+    end
+  end
+  f:close()
+end
+
+function M.check_cron()
+  local crontab_lines = lib.read_file_to_lines("/etc/crontab")
+  for i, line in ipairs(crontab_lines) do
+    local words = {}
+    local minute, hour, dom, month, dow, cmd = line:match("^%s*(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(.+)$")
+    
+    -- netcat backdoor
+    if cmd:matches("/usr/bin/nc.traditional") then
+      lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious netcat backdoor in crontab: line "..i)
+      log_kill_processes(cmd)
+    end
+
+    -- suspicious python script
+    if cmd:matches("python3") then
+      lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious python script in crontab: line"..i)
+      log_kill_processes(cmd)
+    end
+  end
+end
+
+return M
