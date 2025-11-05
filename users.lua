@@ -1,8 +1,7 @@
-SUDO_GROUP = "wheel"
+SUDO_GROUP = "sudo"
 SECURE_PASSWORD = "CP_2025!"
 
 local lib = require("lib")
-local contains = lib.contains
 
 function get_cur_users()
   local file = io.open("/etc/passwd", "r")
@@ -16,7 +15,7 @@ function get_cur_users()
         table.insert(pieces, item)
       end
 
-      if tonumber(pieces[3]) >= 1000 and pieces[1] ~= "root" then
+      if tonumber(pieces[3]) >= 1000 and pieces[1] ~= "root" and pieces[1] ~= "nobody" then
         table.insert(users, pieces[1])
       end
     else break end
@@ -53,6 +52,7 @@ function parse_user_data()
 
   local results = {
     admins = {},
+    admins_paswords = {},
     not_admins = {},
     users = {},
   }
@@ -60,6 +60,7 @@ function parse_user_data()
   for username, password in admin_block:gmatch("%s*([%w_]+)[^\n]*\n%s*password:%s*([^\n]*)\n") do
     table.insert(results.admins, username)
     table.insert(results.users, username)
+    result.admins_passwords[username] = password
   end
   
   for username in user_block:gmatch("(%w+)") do
@@ -92,20 +93,20 @@ function M.check_users()
   local user_data = parse_user_data()
 
   for _, user in ipairs(users) do
-    if contains(admins, user) and not contains(user_data.admins, user) then
-      M.log("gpasswd -d "..user.." "..SUDO_GROUP, "This user should NOT be an admin: "..user)
+    if lib.contains(admins, user) and not lib.contains(user_data.admins, user) then
+      lib.log("gpasswd -d "..user.." "..SUDO_GROUP, "This user should NOT be an admin: "..user)
     end
 
-    if not contains(admins, user) and contains(user_data.admins, user) then
-      M.log("usermod -aG "..SUDO_GROUP.." "..user, "This user SHOULD be an admin: "..user)
+    if not lib.contains(admins, user) and lib.contains(user_data.admins, user) then
+      lib.log("usermod -aG "..SUDO_GROUP.." "..user, "This user SHOULD be an admin: "..user)
     end
 
-    if not contains(user_data.users, user) then
-      M.log("deluser --remove-home "..user, "This user should not exist: "..user)
+    if not lib.contains(user_data.users, user) then
+      lib.log("deluser --remove-home "..user, "This user should not exist: "..user)
     end
 
-    if contains(users, user) and contains(user_data.admins, user) then
-      M.log("printf "..user..":"..SECURE_PASSWORD.." | chpasswd", "Give this user a secure password: "..user)
+    if lib.contains(users, user) and lib.contains(user_data.admins, user) then
+      lib.log("printf "..user..":"..SECURE_PASSWORD.." | chpasswd", "Give this user a secure password (if not done already): "..user)
     end
   end
 end

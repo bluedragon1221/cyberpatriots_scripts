@@ -13,7 +13,7 @@ function M.read_readme()
   end
 end
 
-function M.contains()
+function M.contains(list, value)
   for _, i in ipairs(list) do
     if value == i then
       return true
@@ -42,7 +42,7 @@ function M.log(command, msg)
   if LOG_LEVEL == "command" then
     print(command)
   elseif LOG_LEVEL == "comment" then
-    print(command.." # "..msg.."\n")
+    print(command.." # "..msg)
   end
 end
 
