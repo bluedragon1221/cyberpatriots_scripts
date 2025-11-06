@@ -22,6 +22,24 @@ function M.contains(list, value)
   return false
 end
 
+
+function M.list_installed_packages()
+  local pipe = io.popen("dpkg-query -W -f'${Package}\n'", "r")
+  if not pipe then
+    error("Couldn't run dpkg-query")
+  end
+
+  local packages = {}
+  while true do
+    local line = pipe:read("*l")
+    if line then
+      table.insert(packages, line)
+    else break end
+  end
+
+  return packages
+end
+
 function write_line_log(command, msg)
   local file = io.open(os.getenv("HOME").."/cp_log.txt", "a")
   if file then

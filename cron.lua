@@ -2,7 +2,7 @@ local M = {}
 
 local function log_kill_processes(cmd)
   local quoted = cmd:gsub("'", "'\\''")
-  local f = io.popen("pgrep -af '"..quoted.."''")
+  local f = io.popen("pgrep -af '"..quoted.."'")
 
   local pids = {}
   for line in f:lines() do
@@ -20,19 +20,20 @@ function M.check_cron()
   for i, line in ipairs(crontab_lines) do
     local words = {}
     local minute, hour, dom, month, dow, cmd = line:match("^%s*(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(.+)$")
-    
-    -- netcat backdoor
-    if cmd:matches("/usr/bin/nc.traditional") then
-      lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious netcat backdoor in crontab: line "..i)
-      log_kill_processes(cmd)
-    end
+    if cmd then
+        -- netcat backdoor
+        if cmd:match("/usr/bin/nc.traditional") then
+          lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious netcat backdoor in crontab: line "..i)
+          log_kill_processes(cmd)
+        end
 
-    -- suspicious python script
-    if cmd:matches("python3") then
-      lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious python script in crontab: line"..i)
-      log_kill_processes(cmd)
+        -- suspicious python script
+        if cmd:match("python3") then
+          lib.log("sed -i '"..i.."d' /etc/crontab", "Delete suspicious python script in crontab: line "..i)
+          log_kill_processes(cmd)
+        end
+      end
     end
-  end
 end
 
 return M

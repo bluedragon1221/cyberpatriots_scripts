@@ -52,7 +52,6 @@ function parse_user_data()
 
   local results = {
     admins = {},
-    admins_paswords = {},
     not_admins = {},
     users = {},
   }
@@ -60,7 +59,6 @@ function parse_user_data()
   for username, password in admin_block:gmatch("%s*([%w_]+)[^\n]*\n%s*password:%s*([^\n]*)\n") do
     table.insert(results.admins, username)
     table.insert(results.users, username)
-    result.admins_passwords[username] = password
   end
   
   for username in user_block:gmatch("(%w+)") do
