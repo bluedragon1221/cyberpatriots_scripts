@@ -4,13 +4,24 @@ local M = {}
 
 function M.read_readme()
   local file = io.open(os.getenv("HOME").."/readme.aspx")
-  if file then
-    local contents = file:read("*a")
-    file:close()
-    return contents
-  else
-    error("Can't find readme file at ~/readme.aspx")
+  if not file then
+    local readme_desktop = io.open(os.getenv("HOME").."/Desktop/README.desktop")
+    if not readme_desktop then error("Couldn't read README.desktop. are you on a CyberPatriots virtual machine?") end
+   
+    local content = readme_desktop:read("*a")
+    print(content)
+    readme_desktop:close()
+    local url = content:match("Exec=xdg%-open%s+\"([^\"]+)\"")
+    if not url then error("Couldn't find URL in README.desktop") end
+
+    print("Downloading readme to ~/readme.aspx")
+    os.execute("curl -o ~/readme.aspx "..url)
   end
+
+  local file = io.open(os.getenv("HOME").."/readme.aspx")
+  local contents = file:read("*a")
+  file:close()
+  return contents
 end
 
 function M.contains(list, value)
@@ -52,6 +63,10 @@ function write_line_log(command, msg)
   else
     error("Failed to open log file")
   end
+end
+
+function M.clear_log()
+  io.open(os.getenv("HOME").."/cp_log.txt", "w"):close()
 end
 
 function M.log(command, msg)
