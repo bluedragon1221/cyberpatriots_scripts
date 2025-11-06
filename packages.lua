@@ -23,6 +23,9 @@ BAD_PROGRAMS = {
   "wireshark",
   "mtr-tiny",
   "ophcrack",
+  "doona",
+  "xprobe",
+  "pyrdp",
   "aisleriot"
 }
 
@@ -32,8 +35,24 @@ function M.check_packages()
   local packages = list_installed_packages()
   for _, package in ipairs(packages) do
     if lib.contains(BAD_PROGRAMS, package) then
-      lib.log("apt autoremove -y "..package, "Remove program: "..package)
+      lib.log("apt purge -y "..package, "Remove program: "..package)
     end
+  end
+end
+
+function M.update_packages()
+  lib.log("sudo apt update && sudo apt full-upgrade -y", "Update the system")
+end
+
+function M.check_autoupgrade()
+  local apt_cfg = io.open("/etc/apt/apt.conf.d/20auto-upgrades", "r")
+  if not apt_cfg then
+    lib.log([[cat <<EOF > /etc/apt/apt.conf.d/20auto-upgrades
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "1";
+EOF]], "Enable automatic upgrades")
   end
 end
 

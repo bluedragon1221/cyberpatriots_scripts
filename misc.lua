@@ -3,7 +3,7 @@ local lib = require("lib")
 local M = {}
 
 local function list_home_files()
-  local pipe = io.popen("find "..os.getenv("HOME"), "r")
+  local pipe = io.popen("find /home", "r")
   local lines = {}
   while true do
     local line = pipe:read("*l")
@@ -14,13 +14,8 @@ local function list_home_files()
 end
 
 function M.check_harmful_files()
-  local files = list_home_files()
-
-  for _, file in ipairs(files) do
-    if file:match(".mp3$") then
-      lib.log("rm "..file, "Remove harmful file: "..file)
-    end
-  end
+  lib.log("find /home -type f \\( -name '*.ogg' -o -name '*.mp3' \\) | xargs -n1 rm", "Remove prohibited files")
+  lib.log("rm -rf /usr/games/*", "Remove any game files")
 end
 
 function M.check_syn_cookies()
