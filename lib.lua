@@ -15,7 +15,13 @@ function M.read_readme()
     if not url then error("Couldn't find URL in README.desktop") end
 
     print("Downloading readme to ~/readme.aspx")
-    os.execute("curl -o ~/readme.aspx "..url)
+    if M.contains(M.list_installed_packages(), "curl") then
+      os.execute("curl -o ~/readme.aspx "..url)
+    elseif M.contains(M.list_installed_packages(), "wget") then
+      os.execute("wget -O ~/readme.aspx "..url)
+    else
+      error("No mechanism installed for downloading files. Install wget or curl")
+    end
   end
 
   local file = io.open(os.getenv("HOME").."/readme.aspx")
