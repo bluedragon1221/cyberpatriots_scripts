@@ -14,7 +14,7 @@ local function list_home_files()
 end
 
 function M.check_harmful_files()
-  lib.log("find /home -type f \\( -name '*.ogg' -o -name '*.mp3' \\) | xargs -n1 rm", "Remove prohibited files")
+  lib.log("find /home -type f \\( -name '*.ogg' -o -name '*.mp3' \\) -print0 | xargs -0 -n1 rm", "Remove prohibited files")
   lib.log("rm -rf /usr/games/*", "Remove any game files")
 end
 
