@@ -22,6 +22,20 @@ function M.check_nginx()
   end
 end
 
+function M.check_sshd()
+  local readme = lib.read_readme()
+  if readme:match("sshd") then
+    local sshd_config = io.open("/etc/ssh/sshd_config"):read("*a")
+    if sshd_config:match("\nPermitRootLogin yes\n") then
+      lib.log("sed -i 's/^PermitRootLogin yes$/PermitRootLogin no/' /etc/ssh/sshd_config", "Disallow ssh root login")
+    end
+  else
+    if lib.contains(list_services(), "sshd.service") then
+      lib.log("systemctl disable --now sshd", "Disable service: sshd")
+    end
+  end
+end
+
 BAD_SERVICES = {
   "squid.service"
 }

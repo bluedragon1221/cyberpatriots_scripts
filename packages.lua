@@ -26,7 +26,9 @@ BAD_PROGRAMS = {
   "doona",
   "xprobe",
   "pyrdp",
-  "aisleriot"
+  "aisleriot",
+  "amule",
+  "zangband"
 }
 
 local M = {}
@@ -42,18 +44,6 @@ end
 
 function M.update_packages()
   lib.log("sudo apt update && sudo apt full-upgrade -y", "Update the system")
-end
-
-function M.check_autoupgrade()
-  local apt_cfg = io.open("/etc/apt/apt.conf.d/20auto-upgrades", "r")
-  if not apt_cfg then
-    lib.log([[cat <<EOF > /etc/apt/apt.conf.d/20auto-upgrades
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Download-Upgradeable-Packages "1";
-APT::Periodic::AutocleanInterval "7";
-APT::Periodic::Unattended-Upgrade "1";
-EOF]], "Enable automatic upgrades")
-  end
 end
 
 return M

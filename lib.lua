@@ -39,6 +39,16 @@ function M.contains(list, value)
   return false
 end
 
+function M.enumerate(iter)
+  local i = 0
+  return function()
+    local value = iter()
+    if value ~= nil then
+      i = i + 1
+      return i, value
+    end
+  end
+end
 
 function M.list_installed_packages()
   local pipe = io.popen("dpkg-query -W -f'${Package}\n'", "r")
@@ -55,6 +65,13 @@ function M.list_installed_packages()
   end
 
   return packages
+end
+
+function M.iter_installed_packages()
+  local pipe = io.popen("dpkg-query -W -f'${Package}\n'", "r")
+  return function()
+    return pipe:read("*l")
+  end
 end
 
 function write_line_log(command, msg)

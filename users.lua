@@ -3,25 +3,22 @@ SECURE_PASSWORD = "CP_2025!"
 
 local lib = require("lib")
 
-function get_cur_users()
+local M = {}
+
+function iter_cur_users()
   local file = io.open("/etc/passwd", "r")
-
-  local users = {}
-  while true do
-    local line = file:read("*l")
-    if line then
-      local pieces = {}
-      for item in string.gmatch(line, "[^:]+") do
-        table.insert(pieces, item)
-      end
-
-      if tonumber(pieces[3]) >= 1000 and pieces[1] ~= "root" and pieces[1] ~= "nobody" then
-        table.insert(users, pieces[1])
-      end
-    else break end
+  return function()
+    while true do
+      local line = file:read("*l")
+      if line then
+        local username, uid = line:match("^([^:]+):[^:]+:([^:]+):")
+        if tonumber(uid) >= 1000 and username ~= "root" and username ~= "nobody" then
+          return username
+        end
+      else break end
+    end
+    file:close()
   end
-
-  return users
 end
 
 function get_cur_admins()
@@ -69,28 +66,11 @@ function parse_user_data()
   return results
 end
 
-local M = {}
-
-function M.debug_users_readme()
-  local user_data = parse_user_data()
-
-  print("Admins: ")
-  for _, admin in ipairs(user_data.admins) do
-    print("  "..admin)
-  end
-
-  print("Users: ")
-  for _, user in ipairs(user_data.not_admins) do
-    print("  "..user)
-  end
-end
-
 function M.check_users()
-  local users = get_cur_users()
   local admins = get_cur_admins()  
   local user_data = parse_user_data()
 
-  for _, user in ipairs(users) do
+  for user in iter_cur_users() do
     if lib.contains(admins, user) and not lib.contains(user_data.admins, user) then
       lib.log("gpasswd -d "..user.." "..SUDO_GROUP, "This user should NOT be an admin: "..user)
     end

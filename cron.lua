@@ -1,3 +1,5 @@
+local lib = require("lib")
+
 local M = {}
 
 local function log_kill_processes(cmd)
@@ -16,10 +18,9 @@ local function log_kill_processes(cmd)
 end
 
 function M.check_cron()
-  local crontab_lines = lib.read_file_to_lines("/etc/crontab")
-  for i, line in ipairs(crontab_lines) do
+  for i, line in lib.enumerate(io.lines("/etc/crontab")) do
     local words = {}
-    local minute, hour, dom, month, dow, cmd = line:match("^%s*(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(.+)$")
+    local cmd = line:match("^%s*%S+%s+%S+%s+%S+%s+%S+%s+%S+%s+(.+)$")
     if cmd then
         -- netcat backdoor
         if cmd:match("/usr/bin/nc.traditional") then
@@ -35,5 +36,7 @@ function M.check_cron()
       end
     end
 end
+
+M.check_cron()
 
 return M
