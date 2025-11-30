@@ -25,5 +25,6 @@ misc.check_sysctl()
 misc.check_guest_login()
 
 ## Packages stuff
+packages.check_linuxmint_mirror()
 packages.check_packages()
 packages.update_packages()

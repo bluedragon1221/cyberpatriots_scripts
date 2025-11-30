@@ -21,7 +21,6 @@ BAD_PROGRAMS = {
   "telnet",
   "netcat", "nc",
   "wireshark",
-  "mtr-tiny",
   "ophcrack",
   "doona",
   "xprobe",
@@ -38,6 +37,14 @@ function M.check_packages()
   for _, package in ipairs(packages) do
     if lib.contains(BAD_PROGRAMS, package) then
       lib.log("apt purge -y "..package, "Remove program: "..package)
+    end
+  end
+end
+
+function M.check_linuxmint_mirror()
+  for line_nr, line in lib.enumerate(io.lines("/etc/apt/sources.list.d/official-package-repositories.list")) do
+    if line:match("^#deb%s+http://packages.linuxmint.com") then
+      lib.log("sed -i '"..line_nr.."s/^#//' /etc/apt/sources.list.d/official-package-repositories.list", "Fix Linux Mint Mirror")
     end
   end
 end
