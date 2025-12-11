@@ -22,6 +22,21 @@ function M.check_nginx()
   end
 end
 
+function disable_service(service)
+  if lib.contains(list_services(), service..".service") then
+    lib.log("systemctl disable --now "..service, "Disable service: "..service)
+  end
+end
+
+function M.check_apache()
+  local readme = lib.read_readme()
+  if readme:match("apache") then
+    lib.log("", "Make sure to secure the apache2 server")
+  else
+    disable_service("apache2")
+  end
+end
+
 function M.check_sshd()
   local readme = lib.read_readme()
   if readme:match("sshd") then
@@ -30,9 +45,18 @@ function M.check_sshd()
       lib.log("sed -i 's/^PermitRootLogin yes$/PermitRootLogin no/' /etc/ssh/sshd_config", "Disallow ssh root login")
     end
   else
-    if lib.contains(list_services(), "sshd.service") then
-      lib.log("systemctl disable --now sshd", "Disable service: sshd")
-    end
+    disable_service("sshd")
+  end
+end
+
+function M.check_ftp()
+  local readme = lib.read_readme()
+  if readme:match("ftp") then
+    -- TODO write checks for:
+    -- - Insecure permissions on FTP root directory
+    -- - FTP users may log in with SSL
+  else
+    disable_service("vsftpd")
   end
 end
 

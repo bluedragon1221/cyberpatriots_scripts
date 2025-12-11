@@ -46,10 +46,18 @@ function M.check_common_password()
 
     if line:match("^password.*pam_cracklib.so") then
       -- ucredit: Uppercase letters (A-Z)
+      if not line:match("ucredit=-1") then
+        lib.log("sed -Ei '"..line_nr.."s/$/ ucredit=-1/' /etc/pam.d/common-password", "Set password complexity: ucredit")
+      end
+
       -- lcredit: Lowercase letters (a-z)
+      if not line:match("lcredit=-1") then
+        lib.log("sed -Ei '"..line_nr.."s/$/ lcredit=-1/' /etc/pam.d/common-password", "Set password complexity: lcredit")
+      end
+
       -- dcredit: Digits (0-9)
-      if not line:match("ucredit=-1") and line:match("lcredit=-1") and line:match("dcredit=-1") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ ucredit=-1 lcredit=-1 dcredit=-1/' /etc/pam.d/common-password", "Set password complexity requirements")
+      if not line:match("dcredit=-1") then
+        lib.log("sed -Ei '"..line_nr.."s/$/ dcredit=-1/' /etc/pam.d/common-password", "Set password complexity: dcredit")
       end
   end
 end
