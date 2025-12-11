@@ -59,6 +59,7 @@ function M.check_common_password()
       if not line:match("dcredit=-1") then
         lib.log("sed -Ei '"..line_nr.."s/$/ dcredit=-1/' /etc/pam.d/common-password", "Set password complexity: dcredit")
       end
+    end
   end
 end
 
