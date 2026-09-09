@@ -37,6 +37,8 @@ function M.check_apache()
   end
 end
 
+SSHD_CONFIG = "/etc/ssh/sshd_config"
+
 local function audit_sshd_directive(config_text, key, expected_value)
   local current_value = nil
   
