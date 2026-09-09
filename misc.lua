@@ -40,7 +40,7 @@ function M.check_guest_login()
   local lightdm = io.open("/etc/lightdm/lightdm.conf", "r")
   for line_nr, line in lib.enumerate(lightdm:lines()) do
     if line:match("^[Seat:*]") then
-      lib.log("sed -Ei '"..line_nr.."s/$/\nallow-guest=false\n/' /etc/lightdm/lightdm.conf", "Disable guest account")
+      lib.log("sed -Ei '"..line_nr.."s/$/\\nallow-guest=false\\n/' /etc/lightdm/lightdm.conf", "Disable guest account")
     end
   end
 end
