@@ -18,16 +18,47 @@ function list_installed_packages()
 end
 
 BAD_PROGRAMS = {
+  -- HACKING TOOLS
+  "john",
+  "hydra",
+  "aircrack",
+  "nmap",
+  "zenmap",
+  "wireshark",
+  "tshark",
+  "netcat-traditional",
+  "ncat",
+  "nikto",
+  "medusa",
+  "ophcrack",
+  "hashcat",
+  "kismet",
+  "ettercap",
+  "dsniff",
+  "crack",
+  "metasploit",
+  "yersinia",
   "telnet",
   "netcat", "nc",
-  "wireshark",
-  "ophcrack",
   "doona",
   "xprobe",
   "pyrdp",
+
+  -- GAMES
   "aisleriot",
-  "amule",
+  "gnome-mahjongg",
+  "gnome-mines",
+  "gnome-sudoku",
+  "wesnoth",
+  "minetest",
+  "supertux",
+  "extremetuxracer",
+  "0ad",
+  "freeciv",
   "zangband"
+
+  -- OTHER
+  "amule"
 }
 
 local M = {}
