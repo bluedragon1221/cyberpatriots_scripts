@@ -2,7 +2,7 @@ LOG_LEVEL = "comment" -- "comment", "command", or "none"
 
 local M = {}
 
-local function read_file(path)
+function M.read_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
   local content = f:read("*a")
