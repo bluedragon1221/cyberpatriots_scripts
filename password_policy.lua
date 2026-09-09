@@ -23,7 +23,7 @@ function M.check_login_defs()
 end
 
 function M.check_common_password()
-  local common_password = io.open("/etc/pam.d/common-password", "r"):read("*a")
+  local common_password = io.open("/etc/pam.d/common-password", "r")
 
   if not lib.contains(lib.list_installed_packages(), "libpam-cracklib") then
     lib.log("apt install -y libpam-cracklib", "Install package: libpam-cracklib")
