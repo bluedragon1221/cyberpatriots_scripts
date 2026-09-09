@@ -55,7 +55,7 @@ BAD_PROGRAMS = {
   "extremetuxracer",
   "0ad",
   "freeciv",
-  "zangband"
+  "zangband",
 
   -- OTHER
   "amule"
