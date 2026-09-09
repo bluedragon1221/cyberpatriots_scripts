@@ -5,15 +5,6 @@ local M = {}
 local ADMIN_GROUPS = { "sudo", "wheel", "admin", "adm" }
 local SECURE_PASSWORD = "CP_2025!"
 
--- Helper function to safely read files into memory
-local function read_file(path)
-  local f = io.open(path, "r")
-  if not f then return nil end
-  local content = f:read("*a")
-  f:close()
-  return content
-end
-
 -- Audit system file permissions (/etc/shadow, /etc/passwd, /etc/group)
 local function audit_file_permissions()
   -- /etc/shadow permissions check
@@ -39,7 +30,7 @@ end
 
 -- Audit password aging settings in /etc/login.defs
 local function audit_login_defs()
-  local content = read_file("/etc/login.defs")
+  local content = lib.read_file("/etc/login.defs")
   if not content then return end
 
   local expected = {
@@ -79,7 +70,7 @@ end
 
 -- Audit password complexity requirements in /etc/security/pwquality.conf
 local function audit_pwquality()
-  local content = read_file("/etc/security/pwquality.conf")
+  local content = lib.read_file("/etc/security/pwquality.conf")
   if not content then
     lib.log("apt install libpam-pwquality", "pam_pwquality is missing; install and configure password complexity")
     return
@@ -122,7 +113,7 @@ end
 
 -- Audit account lockout configurations in /etc/security/faillock.conf
 local function audit_faillock()
-  local content = read_file("/etc/security/faillock.conf")
+  local content = lib.read_file("/etc/security/faillock.conf")
   if not content then
     lib.log("WARN", "faillock.conf missing — account lockout policy needs configuration in /etc/pam.d/")
     return
@@ -176,7 +167,7 @@ end
 --------------------------------------------------------------------------------
 
 local function check_uid_zero()
-  local passwd = read_file("/etc/passwd")
+  local passwd = lib.read_file("/etc/passwd")
   if not passwd then return end
 
   for line in passwd:gmatch("[^\r\n]+") do
@@ -188,7 +179,7 @@ local function check_uid_zero()
 end
 
 local function check_blank_passwords()
-  local shadow = read_file("/etc/shadow")
+  local shadow = lib.read_file("/etc/shadow")
   if not shadow then return end
 
   for line in shadow:gmatch("[^\r\n]+") do
@@ -200,7 +191,7 @@ local function check_blank_passwords()
 end
 
 local function get_cur_admins()
-  local group_content = read_file("/etc/group")
+  local group_content = lib.read_file("/etc/group")
   if not group_content then return {}, {} end
 
   local admin_map = {}
@@ -283,7 +274,7 @@ function M.check_users()
   -- User Account & Group Membership Audits
   local cur_admins_set, cur_admins_map = get_cur_admins()
   local user_data = parse_user_data()
-  local passwd_content = read_file("/etc/passwd")
+  local passwd_content = lib.read_file("/etc/passwd")
   if not passwd_content then return end
 
   for line in passwd_content:gmatch("[^\r\n]+") do

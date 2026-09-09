@@ -56,7 +56,7 @@ local function audit_sshd_directive(config_text, key, expected_value)
 end
 
 function M.check_sshd()
-  local config_text = read_file(SSHD_CONFIG)
+  local config_text = lib.read_file(SSHD_CONFIG)
   if not config_text then
     lib.log("INFO", "OpenSSH server not installed, skipping SSH checks")
     return
