@@ -18,7 +18,7 @@ function M.check_login_defs()
 
   local warn_age = login_defs:match("\nPASS_WARN_AGE%s+(%d+)\n")
   if tonumber(warn_age) ~= 7 then
-    lib.log("sed -Ei 's/^PASSWORD_WARN_AGE\\s+[0-9]+$/PASS_WARN_AGE 7/' /etc/login.defs", "Update password warn age")
+    lib.log("sed -Ei 's/^PASS_WARN_AGE\\s+[0-9]+$/PASS_WARN_AGE 7/' /etc/login.defs", "Update password warn age")
   end
 end
 
