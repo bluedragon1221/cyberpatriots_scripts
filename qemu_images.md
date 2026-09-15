@@ -3,7 +3,7 @@ Use QEMU
 
 ## Steps
 1. Create a new dir for the images: `mkdir cp19; cd cp19`
-2. Copy image to new dir `cp <PATH TO .zip FILE> .`
+2. Copy image to new dir `cp "<PATH TO .zip FILE>" .`
 2. Extract image: `unzip cp19*.zip`
 3. Find the right image file. It's the one that's a `.vmdk` file, but without a `s00[1-9]` part.
 4. Convert the image to `qcow2` (qemu format):
@@ -14,6 +14,7 @@ qemu-img convert \
   "<PATH TO THE .vmdk FILE>" \
   ./converted_image.qcow2
 ```
+(that's the letter `O`, not the number `0`, btw)
 5. Run the image with these exact settings:
 ```sh
 qemu-system-x86_64 \
