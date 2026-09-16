@@ -78,7 +78,9 @@ function M.log(command, msg)
   write_line_log(command, msg)
   
   if LOG_LEVEL == "command" then
-    print(command)
+    if command then
+      print(command)
+    end
   elseif LOG_LEVEL == "comment" then
     print(command.." # "..msg)
   end
