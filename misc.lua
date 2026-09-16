@@ -55,9 +55,7 @@ function M.check_guest_login()
   local content = lib.read_file("/etc/lightdm/lightdm.conf")
   if not content then return end
 
-  -- Escaped brackets %[%] to match the literal section header
   if content:match("%[Seat:%*%]") then
-    -- Check if allow-guest is already configured
     if not content:match("allow%-guest%s*=%s*false") then
       lib.log(
         "sed -i '/%[Seat:%*%]/a allow-guest=false' /etc/lightdm/lightdm.conf",

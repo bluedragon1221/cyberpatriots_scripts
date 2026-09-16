@@ -3,8 +3,8 @@ return {
   users = {},
 
   services = {
-    ftp = false,
-    apache = false,
-    nginx = false
+    vsftpd = false,
+    nginx = false,
+    apache2 = false
   }
 }

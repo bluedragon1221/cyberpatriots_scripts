@@ -1,13 +1,9 @@
 local lib = require("lib")
+local slib = require("services.lib")
 
 local M = {}
 
 local APACHE_CONF = "/etc/apache2/apache2.conf"
-
-local function disable_apache()
-  lib.log("systemctl stop apache2", "Stop Apache service")
-  lib.log("systemctl disable apache2", "Disable Apache service on boot")
-end
 
 local function audit_apache_security_conf()
   local security_conf = "/etc/apache2/conf-available/security.conf"
@@ -78,21 +74,12 @@ local function check_directory_indexing()
 end
 
 function M.check_apache()
-  local success, readme = pcall(require, "readme")
-
-  if not success or type(readme) ~= "table" then
-    lib.log(nil, "Skipping Apache checks: readme.lua not found or contains errors.")
-    return
-  end
-
-  local apache_required = readme.services and readme.services.apache
-
-  if apache_required then
+  if slib.should_configure_service("apache2") then
     audit_apache_security_conf()
     audit_web_root_permissions()
     check_directory_indexing()
   else
-    disable_apache()
+    slib.disable_service("apache2")
   end
 end
 

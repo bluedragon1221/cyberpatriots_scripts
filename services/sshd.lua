@@ -1,4 +1,5 @@
-local M = {}
+local lib = require("lib")
+local slib = require("services.lib")
 
 SSHD_CONFIG = "/etc/ssh/sshd_config"
 
@@ -20,27 +21,34 @@ local function audit_sshd_directive(config_text, key, expected_value)
   end
 end
 
+SSHD_OPTIONS = {
+  {"PermitRootLogin", "no"},
+  {"PermitEmptyPasswords", "no"},
+  {"X11Forwarding", "no"},
+  {"MaxAuthTries", "4"},
+  {"IgnoreRhosts", "yes"},
+  {"HostbasedAuthentication", "no"},
+  {"ClientAliveInterval", "300"},
+  {"ClientAliveCountMax", "3"},
+  {"LoginGraceTime", "60"},
+  {"PermitUserEnvironment", "no"}
+}
+
+local M = {}
+
 function M.check_sshd()
-  local config_text = lib.read_file(SSHD_CONFIG)
-  if not config_text then
-    lib.log(nil, "OpenSSH server not installed, skipping SSH checks")
+  if not slib.service_installed("sshd") then
+    lib.log(nil, "Can't find sshd config file, skipping ssh checks")
     return
   end
 
-  local options = {
-    {"PermitRootLogin", "no"},
-    {"PermitEmptyPasswords", "no"},
-    {"X11Forwarding", "no"},
-    {"MaxAuthTries", "4"},
-    {"IgnoreRhosts", "yes"},
-    {"HostbasedAuthentication", "no"},
-    {"ClientAliveInterval", "300"},
-    {"ClientAliveCountMax", "3"},
-    {"LoginGraceTime", "60"},
-    {"PermitUserEnvironment", "no"}
-  }
+  local config_text = lib.read_file(SSHD_CONFIG)
+  if not config_text then
+    lib.log(nil, "Can't find sshd config file, skipping ssh checks")
+    return
+  end
 
-  for _, opt in ipairs(options) do
+  for _, opt in ipairs(SSHD_OPTIONS) do
     audit_sshd_directive(config_text, opt[1], opt[2])
   end
 

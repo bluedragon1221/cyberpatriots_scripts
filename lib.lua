@@ -30,6 +30,14 @@ function M.enumerate(iter)
   end
 end
 
+function M.read_readme()
+  local success, readme = pcall(require, "readme")
+  if not success or type(readme) ~= "table" then
+    lib.log(nil, "readme.lua not found or contains errors")
+    return
+  end
+end
+
 function M.list_installed_packages()
   local pipe = io.popen("dpkg-query -W -f'${Package}\n'", "r")
   if not pipe then

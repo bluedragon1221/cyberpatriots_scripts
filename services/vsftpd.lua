@@ -1,13 +1,9 @@
 local lib = require("lib")
+local slib = require("services.lib")
 
 local M = {}
 
 local VSFTPD_CONF = "/etc/vsftpd.conf"
-
-local function disable_vsftpd()
-  lib.log("systemctl stop vsftpd", "Stop vsftpd service")
-  lib.log("systemctl disable vsftpd", "Disable vsftpd service on boot")
-end
 
 local function audit_vsftpd_conf()
   local content = lib.read_file(VSFTPD_CONF)
@@ -68,22 +64,13 @@ local function check_ftp_root_permissions()
   end
 end
 
-function M.check_ftp()
-  local success, readme = pcall(require, "readme")
-
-  if not success or type(readme) ~= "table" then
-    lib.log(nil, "Skipping FTP checks: readme.lua not found or contains errors.")
-    return
+return {
+  check_vsftpd = function()
+    if slib.should_configure_service("vsftpd") then
+      audit_vsftpd_conf()
+      check_ftp_root_permissions()
+    else
+      slib.disable_service("vsftpd")
+    end
   end
-
-  local ftp_required = readme.services and readme.services.ftp
-
-  if ftp_required then
-    audit_vsftpd_conf()
-    check_ftp_root_permissions()
-  else
-    disable_vsftpd()
-  end
-end
-
-return M
+}
