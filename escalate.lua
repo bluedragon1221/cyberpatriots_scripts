@@ -21,3 +21,5 @@ function M.escalate_privileges()
     os.exit(0)
   end
 end
+
+return M
