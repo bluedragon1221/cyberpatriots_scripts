@@ -57,10 +57,10 @@ local function get_cur_admins()
   return admin_set, admin_map
 end
 
-local function load_user_data()
-  local success, config = pcall(require, "authorized_users")
+local function load_readme_data()
+  local success, config = pcall(require, "readme")
   if not success or type(config) ~= "table" then
-    lib.log("echo 'WARN'", "Skipping user authorization checks: authorized_users.lua not found or contains errors.")
+    lib.log("echo 'WARN'", "Skipping user authorization checks: readme.lua not found or contains errors.")
     return nil
   end
 
@@ -93,87 +93,6 @@ local function audit_user_chage(username)
   end
 end
 
-local function audit_pwquality()
-  local content = lib.read_file("/etc/security/pwquality.conf")
-  if not content then
-    lib.log("apt install libpam-pwquality", "pam_pwquality is missing; install and configure password complexity")
-    return
-  end
-
-  local expected = {
-    minlen = "12",
-    minclass = "3",
-    dcredit = "-1",
-    ucredit = "-1",
-    lcredit = "-1",
-    ocredit = "-1"
-  }
-
-  for key, target_val in pairs(expected) do
-    local cur_val = nil
-    for line in content:gmatch("[^\r\n]+") do
-      if not line:match("^%s*#") then
-        local k, v = line:match("^%s*(%S+)%s*=%s*(%S+)")
-        if k == key then cur_val = v end
-      end
-    end
-
-    if cur_val ~= target_val then
-      lib.log("sed -i -E 's/^[#%s]*(" .. key .. ")\\s*=.*/\\1 = " .. target_val .. "/' /etc/security/pwquality.conf",
-        "pwquality setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")")
-    end
-  end
-
-  -- Check if pam_pwquality is wired into PAM
-  local pam_handle = io.popen("grep -rqs pam_pwquality /etc/pam.d/ 2>/dev/null; echo $?")
-  if pam_handle then
-    local res = pam_handle:read("*l")
-    pam_handle:close()
-    if res ~= "0" then
-      lib.log("WARN", "pwquality.conf is configured, but pam_pwquality is not enabled in /etc/pam.d/")
-    end
-  end
-end
-
--- Audit account lockout configurations in /etc/security/faillock.conf
-local function audit_faillock()
-  local content = lib.read_file("/etc/security/faillock.conf")
-  if not content then
-    lib.log("WARN", "faillock.conf missing — account lockout policy needs configuration in /etc/pam.d/")
-    return
-  end
-
-  local expected = {
-    deny = "5",
-    unlock_time = "1800"
-  }
-
-  for key, target_val in pairs(expected) do
-    local cur_val = nil
-    for line in content:gmatch("[^\r\n]+") do
-      if not line:match("^%s*#") then
-        local k, v = line:match("^%s*(%S+)%s*=%s*(%S+)")
-        if k == key then cur_val = v end
-      end
-    end
-
-    if cur_val ~= target_val then
-      lib.log("sed -i -E 's/^[#%s]*(" .. key .. ")\\s*=.*/\\1 = " .. target_val .. "/' /etc/security/faillock.conf",
-        "faillock setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")")
-    end
-  end
-
-  -- Check if pam_faillock is wired into PAM
-  local pam_handle = io.popen("grep -rqs pam_faillock /etc/pam.d/ 2>/dev/null; echo $?")
-  if pam_handle then
-    local res = pam_handle:read("*l")
-    pam_handle:close()
-    if res ~= "0" then
-      lib.log("WARN", "faillock.conf is configured, but pam_faillock is not referenced in /etc/pam.d/")
-    end
-  end
-end
-
 local function check_pam_backdoors()
   local handle = io.popen("grep -rs 'pam_permit' /etc/pam.d/common-auth /etc/pam.d/system-auth 2>/dev/null | grep -v '^#'")
   if handle then
@@ -186,7 +105,7 @@ local function check_pam_backdoors()
 end
 
 local function check_accounts()
-  local user_data = load_user_data()
+  local user_data = load_readme_data()
   if not user_data then return end
 
   local cur_admins_set, cur_admins_map = get_cur_admins()
@@ -230,8 +149,6 @@ end
 function M.check_users()
   check_uid_zero()
   check_blank_passwords()
-  -- audit_pwquality()
-  -- audit_faillock()
   check_pam_backdoors()
   check_accounts()
 end

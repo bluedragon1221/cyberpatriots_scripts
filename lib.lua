@@ -10,34 +10,6 @@ function M.read_file(path)
   return content
 end
 
-function M.read_readme()
-  local file = io.open(os.getenv("HOME").."/readme.aspx")
-  if not file then
-    local readme_desktop = io.open(os.getenv("HOME").."/Desktop/README.desktop")
-    if not readme_desktop then error("Couldn't read README.desktop. are you on a CyberPatriots virtual machine?") end
-   
-    local content = readme_desktop:read("*a")
-    print(content)
-    readme_desktop:close()
-    local url = content:match("Exec=xdg%-open%s+\"([^\"]+)\"")
-    if not url then error("Couldn't find URL in README.desktop") end
-
-    print("Downloading readme to ~/readme.aspx")
-    if M.contains(M.list_installed_packages(), "curl") then
-      os.execute("curl -o ~/readme.aspx "..url)
-    elseif M.contains(M.list_installed_packages(), "wget") then
-      os.execute("wget -O ~/readme.aspx "..url)
-    else
-      error("No mechanism installed for downloading files. Install wget or curl")
-    end
-  end
-
-  local file = io.open(os.getenv("HOME").."/readme.aspx")
-  local contents = file:read("*a")
-  file:close()
-  return contents
-end
-
 function M.contains(list, value)
   for _, i in ipairs(list) do
     if value == i then

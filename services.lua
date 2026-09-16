@@ -30,34 +30,12 @@ local function check_nginx()
   end
 end
 
-local function check_apache()
-  local readme = lib.read_readme()
-  if readme:match("apache") then
-    lib.log("", "Make sure to secure the apache2 server")
-  else
-    disable_service("apache2")
-  end
-end
-
-local function check_ftp()
-  local readme = lib.read_readme()
-  if readme:match("ftp") then
-    -- TODO write checks for:
-    -- - Insecure permissions on FTP root directory
-    -- - FTP users may log in with SSL
-  else
-    disable_service("vsftpd")
-  end
-end
-
 BAD_SERVICES = {
   "squid.service"
 }
 
 function M.check_services()
   check_nginx()
-  check_apache()
-  check_ftp()
   
   for _, srv in ipairs(list_services()) do
     if lib.contains(BAD_SERVICES, srv) then
