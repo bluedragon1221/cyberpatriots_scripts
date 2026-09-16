@@ -73,13 +73,15 @@ end
 
 return {
   check_nginx = function()
-    if slib.should_configure_service("nginx") then
-      audit_nginx_conf()
-      audit_nginx_ssl()
-      audit_web_root_permissions()
-      check_directory_indexing()
-    else
-      slib.disable_service("nginx")
+    if slib.service_installed("nginx") then
+      if slib.service_in_readme("nginx") then
+        audit_nginx_conf()
+        audit_nginx_ssl()
+        audit_web_root_permissions()
+        check_directory_indexing()
+      else
+        slib.disable_service("nginx")
+      end
     end
   end
 }

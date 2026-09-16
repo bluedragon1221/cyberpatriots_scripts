@@ -1,8 +1,6 @@
 local lib = require("lib")
 local slib = require("services.lib")
 
-local M = {}
-
 local VSFTPD_CONF = "/etc/vsftpd.conf"
 
 local function audit_vsftpd_conf()
@@ -66,11 +64,13 @@ end
 
 return {
   check_vsftpd = function()
-    if slib.should_configure_service("vsftpd") then
-      audit_vsftpd_conf()
-      check_ftp_root_permissions()
-    else
-      slib.disable_service("vsftpd")
+    if slib.service_installed("vsftpd") then
+      if slib.service_in_readme("vsftpd") then
+        audit_vsftpd_conf()
+        check_ftp_root_permissions()
+      else
+        slib.disable_service("vsftpd")
+      end
     end
   end
 }

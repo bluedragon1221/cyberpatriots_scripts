@@ -1,8 +1,6 @@
 local lib = require("lib")
 local slib = require("services.lib")
 
-local M = {}
-
 local APACHE_CONF = "/etc/apache2/apache2.conf"
 
 local function audit_apache_security_conf()
@@ -73,14 +71,16 @@ local function check_directory_indexing()
   end
 end
 
-function M.check_apache()
-  if slib.should_configure_service("apache2") then
-    audit_apache_security_conf()
-    audit_web_root_permissions()
-    check_directory_indexing()
-  else
-    slib.disable_service("apache2")
+return {
+  check_apache = function()
+    if slib.service_installed("apache2") then
+      if slib.service_in_readme("apache2") then
+        audit_apache_security_conf()
+        audit_web_root_permissions()
+        check_directory_indexing()
+      else
+        slib.disable_service("apache2")
+      end
+    end
   end
-end
-
-return M
+}
