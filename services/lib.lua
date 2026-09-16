@@ -21,11 +21,11 @@ end
 
 function M.service_in_readme(service)
   local readme = lib.read_readme()
-  return readme.services and readme.serivces[service]
+  return readme.services and readme.services[service]
 end
 
 function M.should_configure_service(service)
-  return M.serivce_in_readme(service) and M.service_installed(service)
+  return M.service_in_readme(service) and M.service_installed(service)
 end
 
 return M
