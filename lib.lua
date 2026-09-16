@@ -90,7 +90,11 @@ function M.log(command, msg)
       print(command)
     end
   elseif LOG_LEVEL == "comment" then
-    print(command.." # "..msg)
+    if command then
+      print(command.." # "..msg)
+    else
+      print("# "..msg)
+    end
   end
 end
 
