@@ -36,6 +36,7 @@ function M.read_readme()
     lib.log(nil, "readme.lua not found or contains errors")
     return
   end
+  return readme
 end
 
 function M.list_installed_packages()
