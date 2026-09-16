@@ -70,30 +70,6 @@ local function get_cur_admins()
   return admin_set, admin_map
 end
 
-local function load_readme_data()
-  local success, config = pcall(require, "readme")
-  if not success or type(config) ~= "table" then
-    lib.log(nil, "Skipping user authorization checks: readme.lua not found or contains errors.")
-    return nil
-  end
-
-  local results = {
-    admins = config.admins or {},
-    not_admins = config.users or {},
-    users = {}
-  }
-
-  for _, user in ipairs(results.admins) do
-    table.insert(results.users, user)
-  end
-
-  for _, user in ipairs(results.not_admins) do
-    table.insert(results.users, user)
-  end
-
-  return results
-end
-
 local function is_password_already_set(username, target_hash)
   if not target_hash then return false end
   local shadow_content = lib.read_file("/etc/shadow")
@@ -141,8 +117,7 @@ local function check_pam_backdoors()
 end
 
 local function check_accounts()
-  local user_data = load_readme_data()
-  if not user_data then return end
+  local readme = lib.read_readme()
 
   local cur_admins_set, cur_admins_map = get_cur_admins()
   local passwd_content = lib.read_file("/etc/passwd")
@@ -160,24 +135,28 @@ local function check_accounts()
       end
 
       if uid_num >= 1000 and user ~= "nobody" then
-        if not lib.contains(user_data.users, user) then
+        local is_authorized_admin = lib.contains(readme.admins, user)
+        local is_authorized_user = lib.contains(readme.users, user)
+
+        if not is_authorized_admin and not is_authorized_user then
           lib.log("userdel -r " .. user, "Unauthorized user found: " .. user)
         else
           audit_user_chage(user)
 
-          if lib.contains(user_data.not_admins, user) and cur_admins_set[user] then
+          if is_authorized_user and cur_admins_set[user] then
             for _, grp in ipairs(cur_admins_map[user] or {}) do
               lib.log("gpasswd -d " .. user .. " " .. grp, "User should NOT be admin in group '" .. grp .. "': " .. user)
             end
           end
 
-          if lib.contains(user_data.admins, user) and not cur_admins_set[user] then
-            lib.log("usermod -aG sudo " .. user, "User SHOULD be admin: " .. user)
-          end
+          if is_authorized_admin then
+            if not cur_admins_set[user] then
+              lib.log("usermod -aG sudo " .. user, "User SHOULD be admin: " .. user)
+            end
 
-          if not is_password_already_set(user, TARGET_HASH) then
-            -- Uses chpasswd -e to pass pre-calculated hash instead of plaintext password
-            lib.log("printf '" .. user .. ":" .. TARGET_HASH .. "' | chpasswd -e", "Ensure secure password set for: " .. user)
+            if not is_password_already_set(user, TARGET_HASH) then
+              lib.log("printf '" .. user .. ":" .. TARGET_HASH .. "' | chpasswd -e", "Ensure secure password set for admin: " .. user)
+            end
           end
         end
       end

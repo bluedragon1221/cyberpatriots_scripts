@@ -34,7 +34,7 @@ function M.read_readme()
   local success, readme = pcall(require, "readme")
   if not success or type(readme) ~= "table" then
     lib.log(nil, "readme.lua not found or contains errors")
-    return
+    os.exit(1)
   end
   return readme
 end
