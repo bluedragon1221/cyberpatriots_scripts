@@ -81,7 +81,7 @@ function M.check_apache()
   local success, readme = pcall(require, "readme")
 
   if not success or type(readme) ~= "table" then
-    lib.log("echo 'WARN'", "Skipping Apache checks: readme.lua not found or contains errors.")
+    lib.log(nil, "Skipping Apache checks: readme.lua not found or contains errors.")
     return
   end
 

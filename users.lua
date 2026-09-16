@@ -12,7 +12,7 @@ local function check_uid_zero()
   for line in passwd:gmatch("[^\r\n]+") do
     local user, uid = line:match("^([^:]+):[^:]+:([^:]+):")
     if user and uid and tonumber(uid) == 0 and user ~= "root" then
-      lib.log("usermod -u 1001 " .. user, "WARN: Non-root UID 0 account found (backdoor indicator): " .. user)
+      lib.log("usermod -u 1001 " .. user, "Non-root UID 0 account found (backdoor indicator): " .. user)
     end
   end
 end
@@ -24,7 +24,7 @@ local function check_blank_passwords()
   for line in shadow:gmatch("[^\r\n]+") do
     local user, pass = line:match("^([^:]+):([^:]*):")
     if user and pass == "" then
-      lib.log("passwd -l " .. user, "WARN: Account has a BLANK password: " .. user)
+      lib.log("passwd -l " .. user, "Account has a BLANK password: " .. user)
     end
   end
 end
@@ -60,7 +60,7 @@ end
 local function load_readme_data()
   local success, config = pcall(require, "readme")
   if not success or type(config) ~= "table" then
-    lib.log("echo 'WARN'", "Skipping user authorization checks: readme.lua not found or contains errors.")
+    lib.log(nil, "Skipping user authorization checks: readme.lua not found or contains errors.")
     return nil
   end
 
@@ -125,7 +125,7 @@ local function check_pam_backdoors()
     local output = handle:read("*a")
     handle:close()
     if output and #output > 0 then
-      lib.log("echo 'WARN'", "'pam_permit' found in active PAM authentication stack (Backdoor risk!)")
+      lib.log(nil, "'pam_permit' found in active PAM authentication stack (Backdoor risk!)")
     end
   end
 end

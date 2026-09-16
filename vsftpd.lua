@@ -72,7 +72,7 @@ function M.check_ftp()
   local success, readme = pcall(require, "readme")
 
   if not success or type(readme) ~= "table" then
-    lib.log("echo 'WARN'", "Skipping FTP checks: readme.lua not found or contains errors.")
+    lib.log(nil, "Skipping FTP checks: readme.lua not found or contains errors.")
     return
   end
 
