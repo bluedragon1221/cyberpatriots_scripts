@@ -52,3 +52,4 @@ function M.check_sshd()
   lib.log("INFO", "sshd PasswordAuthentication is '" .. (pwauth or "default(yes)") .. "'")
 end
 
+return M
