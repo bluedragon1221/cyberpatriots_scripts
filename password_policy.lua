@@ -29,43 +29,45 @@ function M.check_login_defs()
 end
 
 function M.check_common_password()
-  local common_password = io.open("/etc/pam.d/common-password", "r")
-  if not common_password then return end
-
   if not lib.contains(lib.list_installed_packages(), "libpam-cracklib") then
     lib.log("apt install -y libpam-cracklib", "Install package: libpam-cracklib")
   end
 
-  for line_nr, line in lib.enumerate(common_password:lines()) do
-    if line:match("^password.*pam_unix.so") then
-      if not line:match("remember=5") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ remember=5/' /etc/pam.d/common-password", "Enforce password reuse policy")
+  local content = lib.read_file("/etc/pam.d/common-password")
+  if not content then return end
+
+  local lines = {}
+  for line in content:gmatch("[^\r\n]+") do
+    table.insert(lines, line)
+  end
+
+  for line_nr, line in ipairs(lines) do
+    if not line:match("^%s*#") then
+      
+      if line:match("^password%s+.*pam_unix%.so") then
+        if not line:match("%sremember=%d+") then
+          lib.log(string.format("sed -i '%ds/$/ remember=5/' /etc/pam.d/common-password", line_nr), "Enforce password reuse policy")
+        end
+
+        if not line:match("%sminlen=%d+") then
+          lib.log(string.format("sed -i '%ds/$/ minlen=8/' /etc/pam.d/common-password", line_nr), "Enforce password length policy")
+        end
+
+        if line:match("%snullok") then
+          lib.log(string.format("sed -i '%ds/\\bnullok\\b//' /etc/pam.d/common-password", line_nr), "Null passwords don't authenticate")
+        end
       end
 
-      if not line:match("minlen=8") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ minlen=8/' /etc/pam.d/common-password", "Enforce password length policy")
-      end
-
-      if line:match("nullok") then
-        lib.log("sed -Ei '"..line_nr.."s/nullok//' /etc/pam.d/common-password", "Null passwords don't authenticate")
-      end
-    end
-
-    if line:match("^password.*pam_cracklib.so") then
-      if not line:match("ucredit=-1") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ ucredit=-1/' /etc/pam.d/common-password", "Set password complexity: ucredit")
-      end
-
-      if not line:match("lcredit=-1") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ lcredit=-1/' /etc/pam.d/common-password", "Set password complexity: lcredit")
-      end
-
-      if not line:match("dcredit=-1") then
-        lib.log("sed -Ei '"..line_nr.."s/$/ dcredit=-1/' /etc/pam.d/common-password", "Set password complexity: dcredit")
+      if line:match("^password%s+.*pam_cracklib%.so") then
+        for _, opt in ipairs({ "ucredit=-1", "lcredit=-1", "dcredit=-1" }) do
+          local key = opt:match("^([^=]+)")
+          if not line:match("%s" .. key .. "=%-?%d+") then
+            lib.log(string.format("sed -i '%ds/$/ %s/' /etc/pam.d/common-password", line_nr, opt), "Set password complexity: " .. key)
+          end
+        end
       end
     end
   end
-  common_password:close()
 end
 
 return M

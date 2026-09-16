@@ -141,7 +141,7 @@ local function check_accounts()
         if not is_authorized_admin and not is_authorized_user then
           lib.log("userdel -r " .. user, "Unauthorized user found: " .. user)
         else
-          audit_user_chage(user)
+          -- audit_user_chage(user)
 
           if is_authorized_user and cur_admins_set[user] then
             for _, grp in ipairs(cur_admins_map[user] or {}) do
