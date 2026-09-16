@@ -23,7 +23,7 @@ end
 function M.check_sshd()
   local config_text = lib.read_file(SSHD_CONFIG)
   if not config_text then
-    lib.log("INFO", "OpenSSH server not installed, skipping SSH checks")
+    lib.log(nil, "OpenSSH server not installed, skipping SSH checks")
     return
   end
 
@@ -49,7 +49,7 @@ function M.check_sshd()
   end
 
   local pwauth = config_text:match("[\r\n]%s*PasswordAuthentication%s+([%w]+)")
-  lib.log("INFO", "sshd PasswordAuthentication is '" .. (pwauth or "default(yes)") .. "'")
+  lib.log(nil, "sshd PasswordAuthentication is '" .. (pwauth or "default(yes)") .. "'")
 end
 
 return M
