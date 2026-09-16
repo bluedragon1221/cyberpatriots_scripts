@@ -22,7 +22,7 @@ local function check_blank_passwords()
   if not shadow then return end
 
   for line in shadow:gmatch("[^\r\n]+") do
-    local user, pass = line:match("^([^:]+):[^:]*:([^:]*)")
+    local user, pass = line:match("^([^:]+):([^:]*):")
     if user and pass == "" then
       lib.log("passwd -l " .. user, "WARN: Account has a BLANK password: " .. user)
     end
@@ -79,6 +79,32 @@ local function load_readme_data()
   end
 
   return results
+end
+
+local function is_password_already_set(username, target_password)
+  local shadow_content = lib.read_file("/etc/shadow")
+  if not shadow_content then return false end
+
+  for line in shadow_content:gmatch("[^\r\n]+") do
+    local user, hash = line:match("^([^:]+):([^:]+):")
+    if user == username and hash and hash:match("^%$") then
+      -- Extract salt prefix (e.g., $6$saltstring$)
+      local salt = hash:match("^(%$[^%$]+%$[^%$]+%$)")
+      if salt then
+        local clean_salt = salt:gsub("%$", "")
+        local handle = io.popen(string.format("openssl passwd -6 -salt %q %q 2>/dev/null", clean_salt, target_password))
+        if handle then
+          local generated_hash = handle:read("*l")
+          handle:close()
+          if generated_hash == hash then
+            return true
+          end
+        end
+      end
+    end
+  end
+
+  return false
 end
 
 local function audit_user_chage(username)
@@ -139,7 +165,9 @@ local function check_accounts()
             lib.log("usermod -aG sudo " .. user, "User SHOULD be admin: " .. user)
           end
 
-          lib.log("printf '" .. user .. ":" .. SECURE_PASSWORD .. "' | chpasswd", "Ensure secure password set for: " .. user)
+          if not is_password_already_set(user, SECURE_PASSWORD) then
+            lib.log("printf '" .. user .. ":" .. SECURE_PASSWORD .. "' | chpasswd", "Ensure secure password set for: " .. user)
+          end
         end
       end
     end
