@@ -13,7 +13,7 @@ misc = require("misc")
 
 lib.clear_log()
 
-require("escalate.lua").escalate_privileges()
+require("escalate").escalate_privileges()
 
 -- Accounts stuff
 users.check_users()
