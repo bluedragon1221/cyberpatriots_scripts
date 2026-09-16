@@ -67,13 +67,6 @@ function M.check_guest_login()
   end
 end
 
-function M.check_shadow_permissions()
-  local shadow_permissions = io.popen("stat -c '%a' /etc/shadow", "r"):read("*a")
-  if not shadow_permissions:match("640") then
-    lib.log("chmod 640 /etc/shadow", "Secure shadow file")
-  end
-end
-
 function M.check_sudoers()
   local sudoers_files = {}
 

@@ -22,7 +22,7 @@ local function check_blank_passwords()
   if not shadow then return end
 
   for line in shadow:gmatch("[^\r\n]+") do
-    local user, pass = line:match("^([^:]+):([^:]*):")
+    local user, pass = line:match("^([^:]+):[^:]*:([^:]*)")
     if user and pass == "" then
       lib.log("passwd -l " .. user, "WARN: Account has a BLANK password: " .. user)
     end
@@ -57,95 +57,28 @@ local function get_cur_admins()
   return admin_set, admin_map
 end
 
-local function parse_user_data()
-  local html_content = lib.read_readme()
-  if not html_content then return { admins = {}, users = {}, not_admins = {} } end
-
-  local pre_content = html_content:match("<h2[^>]*>%s*Authorized Administrators and Users%s*</h2>[%s%S]-<pre class=\"wp%-block%-preformatted\">([%s%S]-)</pre>")
-
-  if not pre_content then
-    lib.log("WARN", "Could not locate Authorized Users section in README")
-    return { admins = {}, users = {}, not_admins = {} }
+local function load_user_data()
+  local success, config = pcall(require, "authorized_users")
+  if not success or type(config) ~= "table" then
+    lib.log("echo 'WARN'", "Skipping user authorization checks: authorized_users.lua not found or contains errors.")
+    return nil
   end
-
-  local admin_block, user_block = pre_content:match("<strong>Authorized Administrators:</strong>([%s%S]-)<strong>Authorized Users:</strong>([%s%S]+)")
-
-  admin_block = admin_block or ""
-  user_block = user_block or ""
 
   local results = {
-    admins = {},
-    not_admins = {},
-    users = {},
+    admins = config.admins or {},
+    not_admins = config.users or {},
+    users = {}
   }
 
-  for line in admin_block:gmatch("[^\r\n]+") do
-    local username = line:match("^%s*([%w_%-]+)%s*$")
-    if username and username ~= "password" then
-      table.insert(results.admins, username)
-      table.insert(results.users, username)
-    end
+  for _, user in ipairs(results.admins) do
+    table.insert(results.users, user)
   end
 
-  for line in user_block:gmatch("[^\r\n]+") do
-    local username = line:match("^%s*([%w_%-]+)%s*$")
-    if username then
-      table.insert(results.not_admins, username)
-      table.insert(results.users, username)
-    end
+  for _, user in ipairs(results.not_admins) do
+    table.insert(results.users, user)
   end
 
   return results
-end
-
--- Checks
-
-local function audit_file_permissions()
-  -- /etc/shadow permissions check
-  local shadow_stat = io.popen("stat -c '%a %U:%G' /etc/shadow 2>/dev/null"):read("*l")
-  if shadow_stat then
-    if not (shadow_stat == "640 root:shadow" or shadow_stat == "0 root:root" or shadow_stat == "400 root:root") then
-      lib.log("chown root:shadow /etc/shadow && chmod 640 /etc/shadow", "Insecure permissions on /etc/shadow: " .. shadow_stat)
-    end
-  end
-
-  -- /etc/passwd permissions check
-  local passwd_stat = io.popen("stat -c '%a %U:%G' /etc/passwd 2>/dev/null"):read("*l")
-  if passwd_stat and passwd_stat ~= "644 root:root" then
-    lib.log("chown root:root /etc/passwd && chmod 644 /etc/passwd", "Insecure permissions on /etc/passwd: " .. passwd_stat)
-  end
-
-  -- /etc/group permissions check
-  local group_stat = io.popen("stat -c '%a %U:%G' /etc/group 2>/dev/null"):read("*l")
-  if group_stat and group_stat ~= "644 root:root" then
-    lib.log("chown root:root /etc/group && chmod 644 /etc/group", "Insecure permissions on /etc/group: " .. group_stat)
-  end
-end
-
-local function audit_login_defs()
-  local content = lib.read_file("/etc/login.defs")
-  if not content then return end
-
-  local expected = {
-    PASS_MAX_DAYS = "90",
-    PASS_MIN_DAYS = "10",
-    PASS_WARN_AGE = "7"
-  }
-
-  for key, target_val in pairs(expected) do
-    local cur_val = nil
-    for line in content:gmatch("[^\r\n]+") do
-      if not line:match("^%s*#") then
-        local k, v = line:match("^%s*(%S+)%s+(%S+)")
-        if k == key then cur_val = v end
-      end
-    end
-
-    if cur_val ~= target_val then
-      lib.log("sed -i -E 's/^#?\\s*(" .. key .. ")\\s+.*/\\1\\t" .. target_val .. "/' /etc/login.defs", 
-        "login.defs setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")")
-    end
-  end
 end
 
 local function audit_user_chage(username)
@@ -160,7 +93,6 @@ local function audit_user_chage(username)
   end
 end
 
--- Audit password complexity requirements in /etc/security/pwquality.conf
 local function audit_pwquality()
   local content = lib.read_file("/etc/security/pwquality.conf")
   if not content then
@@ -242,7 +174,6 @@ local function audit_faillock()
   end
 end
 
--- Scan PAM configuration files for authentication backdoors like 'pam_permit'
 local function check_pam_backdoors()
   local handle = io.popen("grep -rs 'pam_permit' /etc/pam.d/common-auth /etc/pam.d/system-auth 2>/dev/null | grep -v '^#'")
   if handle then
@@ -255,8 +186,10 @@ local function check_pam_backdoors()
 end
 
 local function check_accounts()
+  local user_data = load_user_data()
+  if not user_data then return end
+
   local cur_admins_set, cur_admins_map = get_cur_admins()
-  local user_data = parse_user_data()
   local passwd_content = lib.read_file("/etc/passwd")
   if not passwd_content then return end
 
@@ -265,21 +198,18 @@ local function check_accounts()
     local uid_num = tonumber(uid)
 
     if user and uid_num then
-      -- system accounts with login shells
       if uid_num < 1000 and uid_num > 0 then
         if shell and shell:match("/bin/[bsh|sh|zsh|bash]") then
           lib.log("usermod -s /usr/sbin/nologin " .. user, "System account has active login shell: " .. user)
         end
       end
 
-      -- Standard human accounts (UID >= 1000)
       if uid_num >= 1000 and user ~= "nobody" then
         if not lib.contains(user_data.users, user) then
           lib.log("userdel -r " .. user, "Unauthorized user found: " .. user)
         else
           audit_user_chage(user)
 
-          -- Group membership validations
           if lib.contains(user_data.not_admins, user) and cur_admins_set[user] then
             for _, grp in ipairs(cur_admins_map[user] or {}) do
               lib.log("gpasswd -d " .. user .. " " .. grp, "User should NOT be admin in group '" .. grp .. "': " .. user)
@@ -300,8 +230,6 @@ end
 function M.check_users()
   check_uid_zero()
   check_blank_passwords()
-  audit_file_permissions()
-  audit_login_defs()
   -- audit_pwquality()
   -- audit_faillock()
   check_pam_backdoors()

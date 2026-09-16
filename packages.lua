@@ -63,16 +63,23 @@ BAD_PROGRAMS = {
 
 local M = {}
 
-function M.check_packages()
-  local packages = list_installed_packages()
-  for _, package in ipairs(packages) do
-    if lib.contains(BAD_PROGRAMS, package) then
-      lib.log("apt purge -y "..package, "Remove program: "..package)
+local function check_packages()
+  local installed = list_installed_packages()
+  local to_remove = {}
+
+  for _, package in ipairs(BAD_PROGRAMS) do
+    if lib.contains(installed, package) then
+      table.insert(to_remove, package)
     end
+  end
+
+  if #to_remove > 0 then
+    local package_list = table.concat(to_remove, " ")
+    lib.log("apt purge -y " .. package_list, "Remove prohibited programs: " .. package_list)
   end
 end
 
-function M.check_linuxmint_mirror()
+local function check_linuxmint_mirror()
   for line_nr, line in lib.enumerate(io.lines("/etc/apt/sources.list.d/official-package-repositories.list")) do
     if line:match("^#deb%s+http://packages.linuxmint.com") then
       lib.log("sed -i '"..line_nr.."s/^#//' /etc/apt/sources.list.d/official-package-repositories.list", "Fix Linux Mint Mirror")
@@ -80,8 +87,14 @@ function M.check_linuxmint_mirror()
   end
 end
 
-function M.update_packages()
+local function update_packages()
   lib.log("sudo apt update && sudo apt full-upgrade -y", "Update the system")
+end
+
+function M.check_packages()
+  check_packages()
+  check_linuxmint_mirror()
+  update_packages()
 end
 
 return M

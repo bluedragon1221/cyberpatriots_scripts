@@ -1,29 +1,36 @@
-lib = require("lib")
+local lib = require("lib")
 
 local M = {}
 
 function M.check_login_defs()
-  local f = io.open("/etc/login.defs", "r")
-  local login_defs = f:read("*a")
+  local content = lib.read_file("/etc/login.defs")
+  if not content then return end
 
-  local max_days = login_defs:match("\nPASS_MAX_DAYS%s+(%d+)\n")
-  if tonumber(max_days) ~= 90 then
-    lib.log("sed -Ei 's/^PASS_MAX_DAYS\\s+[0-9]+$/PASS_MAX_DAYS 90/' /etc/login.defs", "Update password maximum time")
-  end
+  local expected = {
+    PASS_MAX_DAYS = "90",
+    PASS_MIN_DAYS = "10",
+    PASS_WARN_AGE = "7"
+  }
 
-  local min_days = login_defs:match("\nPASS_MIN_DAYS%s+(%d+)\n")
-  if tonumber(min_days) ~= 10 then
-    lib.log("sed -Ei 's/^PASS_MIN_DAYS\\s+[0-9]+$/PASS_MIN_DAYS 10/' /etc/login.defs", "Update password minimum time")
-  end
+  for key, target_val in pairs(expected) do
+    local cur_val = nil
+    for line in content:gmatch("[^\r\n]+") do
+      if not line:match("^%s*#") then
+        local k, v = line:match("^%s*(%S+)%s+(%S+)")
+        if k == key then cur_val = v end
+      end
+    end
 
-  local warn_age = login_defs:match("\nPASS_WARN_AGE%s+(%d+)\n")
-  if tonumber(warn_age) ~= 7 then
-    lib.log("sed -Ei 's/^PASS_WARN_AGE\\s+[0-9]+$/PASS_WARN_AGE 7/' /etc/login.defs", "Update password warn age")
+    if cur_val ~= target_val then
+      lib.log("sed -i -E 's/^#?\\s*(" .. key .. ")\\s+.*/\\1\\t" .. target_val .. "/' /etc/login.defs", 
+        "login.defs setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")")
+    end
   end
 end
 
 function M.check_common_password()
   local common_password = io.open("/etc/pam.d/common-password", "r")
+  if not common_password then return end
 
   if not lib.contains(lib.list_installed_packages(), "libpam-cracklib") then
     lib.log("apt install -y libpam-cracklib", "Install package: libpam-cracklib")
@@ -45,22 +52,20 @@ function M.check_common_password()
     end
 
     if line:match("^password.*pam_cracklib.so") then
-      -- ucredit: Uppercase letters (A-Z)
       if not line:match("ucredit=-1") then
         lib.log("sed -Ei '"..line_nr.."s/$/ ucredit=-1/' /etc/pam.d/common-password", "Set password complexity: ucredit")
       end
 
-      -- lcredit: Lowercase letters (a-z)
       if not line:match("lcredit=-1") then
         lib.log("sed -Ei '"..line_nr.."s/$/ lcredit=-1/' /etc/pam.d/common-password", "Set password complexity: lcredit")
       end
 
-      -- dcredit: Digits (0-9)
       if not line:match("dcredit=-1") then
         lib.log("sed -Ei '"..line_nr.."s/$/ dcredit=-1/' /etc/pam.d/common-password", "Set password complexity: dcredit")
       end
     end
   end
+  common_password:close()
 end
 
 return M
