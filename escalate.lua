@@ -10,6 +10,7 @@ end
 function M.escalate_privileges() 
   if get_uid() ~= 0 then
     print("[!] Not running as root. Rerun with sudo")
+    os.exit(1)
   end
 end
 
