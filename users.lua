@@ -3,7 +3,20 @@ local lib = require("lib")
 local M = {}
 
 local ADMIN_GROUPS = { "sudo", "wheel", "admin", "adm" }
-local SECURE_PASSWORD = "CP_2025!"
+local SECURE_PASSWORD = "Cyber_2026!"
+local PREDETERMINED_SALT = "CyberSalt2026"
+
+-- Helper function to generate SHA-512 shadow hash using a fixed salt via OpenSSL
+local function generate_target_hash(password, salt)
+  local handle = io.popen(string.format("openssl passwd -6 -salt %q %q 2>/dev/null", salt, password))
+  if not handle then return nil end
+  local hash = handle:read("*l")
+  handle:close()
+  return hash
+end
+
+-- Pre-calculate target hash using predetermined salt
+local TARGET_HASH = generate_target_hash(SECURE_PASSWORD, PREDETERMINED_SALT)
 
 local function check_uid_zero()
   local passwd = lib.read_file("/etc/passwd")
@@ -81,25 +94,16 @@ local function load_readme_data()
   return results
 end
 
-local function is_password_already_set(username, target_password)
+local function is_password_already_set(username, target_hash)
+  if not target_hash then return false end
   local shadow_content = lib.read_file("/etc/shadow")
   if not shadow_content then return false end
 
   for line in shadow_content:gmatch("[^\r\n]+") do
     local user, hash = line:match("^([^:]+):([^:]+):")
-    if user == username and hash and hash:match("^%$") then
-      -- Extract salt prefix (e.g., $6$saltstring$)
-      local salt = hash:match("^(%$[^%$]+%$[^%$]+%$)")
-      if salt then
-        local clean_salt = salt:gsub("%$", "")
-        local handle = io.popen(string.format("openssl passwd -6 -salt %q %q 2>/dev/null", clean_salt, target_password))
-        if handle then
-          local generated_hash = handle:read("*l")
-          handle:close()
-          if generated_hash == hash then
-            return true
-          end
-        end
+    if user == username and hash then
+      if hash == target_hash then
+        return true
       end
     end
   end
@@ -165,8 +169,9 @@ local function check_accounts()
             lib.log("usermod -aG sudo " .. user, "User SHOULD be admin: " .. user)
           end
 
-          if not is_password_already_set(user, SECURE_PASSWORD) then
-            lib.log("printf '" .. user .. ":" .. SECURE_PASSWORD .. "' | chpasswd", "Ensure secure password set for: " .. user)
+          if not is_password_already_set(user, TARGET_HASH) then
+            -- Uses chpasswd -e to pass pre-calculated hash instead of plaintext password
+            lib.log("printf '" .. user .. ":" .. TARGET_HASH .. "' | chpasswd -e", "Ensure secure password set for: " .. user)
           end
         end
       end
