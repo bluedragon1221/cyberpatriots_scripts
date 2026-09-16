@@ -57,12 +57,14 @@ end
 function write_line_log(command, msg)
   local file = io.open(os.getenv("HOME").."/cp_log.txt", "a")
   if file then
-    if msg then
-      file:write(command.." # "..msg.."\n")
-    else
-      file:write(command.."\n")
+    if command then
+      if msg then
+        file:write(command.." # "..msg.."\n")
+      else
+        file:write(command.."\n")
+      end
+      file:close()
     end
-    file:close()
   else
     error("Failed to open log file")
   end
