@@ -124,12 +124,18 @@ local function audit_user_chage(username)
 end
 
 local function check_pam_backdoors()
-  local handle = io.popen("grep -rs 'pam_permit' /etc/pam.d/common-auth /etc/pam.d/system-auth 2>/dev/null | grep -v '^#'")
+  local handle = io.popen("grep -Hrs 'pam_permit' /etc/pam.d/common-auth /etc/pam.d/system-auth 2>/dev/null | grep -v '^[^\\:]*:#'")
   if handle then
     local output = handle:read("*a")
     handle:close()
+
     if output and #output > 0 then
-      lib.log(nil, "'pam_permit' found in active PAM authentication stack (Backdoor risk!)")
+      for line in output:gmatch("[^\r\n]+") do
+        local file, match = line:match("^([^:]+):%s*(.*)")
+        if file and match then
+          lib.log(nil, string.format("'pam_permit' found in '%s' (Backdoor risk! Line: %s)", file, match))
+        end
+      end
     end
   end
 end
