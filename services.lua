@@ -17,26 +17,11 @@ function disable_service(service)
   end
 end
 
--- Services
-
-local function check_nginx()
-  local readme = lib.read_readme()
-  if readme:match("nginx") then
-    lib.log(nil, "You must configure nginx")
-  else
-    if lib.contains(list_services(), "nginx.service") then
-      lib.log("systemctl disable --now nginx", "Disable service: nginx")
-    end
-  end
-end
-
 BAD_SERVICES = {
   "squid.service"
 }
 
 function M.check_services()
-  check_nginx()
-  
   for _, srv in ipairs(list_services()) do
     if lib.contains(BAD_SERVICES, srv) then
       lib.log("systemctl disable --now "..srv, "Disable service: "..srv)
