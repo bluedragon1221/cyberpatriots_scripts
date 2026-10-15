@@ -23,8 +23,24 @@ qemu-system-x86_64 \
   -smp 4 \
   -m 4096 \
   -drive file=converted_image.qcow2,if=virtio,format=qcow2 \
-  -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
+  -netdev user,id=net0 \
+  -device virtio-net-pci,netdev=net0 \
   -vga virtio \
   -display default
 ```
 (helps to save this in a script or something)
+
+## `qemu-system` command for M* Mac devices
+```sh
+qemu-system-x86_64 \
+  -accel tcg \
+  -cpu max \
+  -smp 4 \
+  -m 3072 \
+  -drive file=converted_image.qcow2,if=virtio,format=qcow2 \
+  -netdev user,id=net0 \
+  -device virtio-net-pci,netdev=net0 \
+  -vga std \
+  -display default
+```
+

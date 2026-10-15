@@ -88,7 +88,7 @@ local function check_linuxmint_mirror()
 end
 
 local function update_packages()
-  lib.log("sudo apt update && sudo apt full-upgrade -y", "Update the system")
+  lib.log("apt update && apt full-upgrade -y", "Update the system")
 end
 
 function M.check_packages()
