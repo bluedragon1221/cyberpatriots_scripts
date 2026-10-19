@@ -11,12 +11,22 @@ function M.list_services()
   return lines
 end
 
+-- `systemctl cat` succeeds for any unit file that exists, active or not, and follows aliases
 function M.service_installed(service)
-  return lib.contains(M.list_services(), service..".service")
+  return lib.run_ok("systemctl cat "..service..".service >/dev/null 2>&1")
 end
 
+function M.service_running_or_enabled(service)
+  return lib.run_ok("systemctl is-active --quiet "..service..".service")
+      or lib.run_ok("systemctl is-enabled --quiet "..service..".service")
+end
+
+-- Only emits the command if there's something to disable
 function M.disable_service(service)
-  lib.log("systemctl disable --now "..service, "Disable service: "..service)
+  service = service:gsub("%.service$", "")
+  if M.service_running_or_enabled(service) then
+    lib.log("systemctl disable --now "..service, "Disable service: "..service)
+  end
 end
 
 function M.service_in_readme(service)

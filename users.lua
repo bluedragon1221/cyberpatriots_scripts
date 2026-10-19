@@ -88,7 +88,7 @@ local function is_password_already_set(username, target_hash)
 end
 
 local function audit_user_chage(username)
-  local handle = io.popen("chage -l " .. username .. " 2>/dev/null")
+  local handle = io.popen("LC_ALL=C chage -l " .. username .. " 2>/dev/null")
   if not handle then return end
   local output = handle:read("*a")
   handle:close()
@@ -116,22 +116,40 @@ local function check_pam_backdoors()
   end
 end
 
+local LOGIN_SHELLS = { bash=true, sh=true, dash=true, zsh=true, ksh=true, fish=true, tcsh=true, csh=true, rbash=true }
+
+local KNOWN_SYSTEM_ACCOUNTS = { postgres=true, syslog=true }
+
+local function check_hidden_user(user, shell, home, readme)
+  if lib.contains(readme.admins, user) or lib.contains(readme.users, user) then return end
+  if KNOWN_SYSTEM_ACCOUNTS[user] then return end
+
+  local shell_name = (shell or ""):match("([^/]+)$")
+  if shell_name and LOGIN_SHELLS[shell_name] then
+    lib.log("userdel -r " .. user, "Hidden unauthorized user (UID < 1000 with login shell " .. shell .. "): " .. user)
+  elseif home and home:match("^/home/") then
+    lib.log(nil, "REVIEW: UID < 1000 account '" .. user .. "' has home " .. home .. " but no login shell")
+  end
+end
+
 local function check_accounts()
   local readme = lib.read_readme()
+  if #readme.admins == 0 and #readme.users == 0 then
+    lib.log(nil, "readme.lua has no admins/users filled in; skipping account checks (would flag EVERY user)")
+    return
+  end
 
   local cur_admins_set, cur_admins_map = get_cur_admins()
   local passwd_content = lib.read_file("/etc/passwd")
   if not passwd_content then return end
 
   for line in passwd_content:gmatch("[^\r\n]+") do
-    local user, uid, shell = line:match("^([^:]+):[^:]+:([^:]+):[^:]*:[^:]*:[^:]*:([^:]*)")
+    local user, uid, home, shell = line:match("^([^:]+):[^:]+:([^:]+):[^:]*:[^:]*:([^:]*):([^:]*)")
     local uid_num = tonumber(uid)
 
     if user and uid_num then
       if uid_num < 1000 and uid_num > 0 then
-        if shell and shell:match("/bin/[bsh|sh|zsh|bash]") then
-          lib.log("usermod -s /usr/sbin/nologin " .. user, "System account has active login shell: " .. user)
-        end
+        check_hidden_user(user, shell, home, readme)
       end
 
       if uid_num >= 1000 and user ~= "nobody" then
@@ -141,7 +159,7 @@ local function check_accounts()
         if not is_authorized_admin and not is_authorized_user then
           lib.log("userdel -r " .. user, "Unauthorized user found: " .. user)
         else
-          -- audit_user_chage(user)
+          audit_user_chage(user)
 
           if is_authorized_user and cur_admins_set[user] then
             for _, grp in ipairs(cur_admins_map[user] or {}) do
@@ -164,11 +182,44 @@ local function check_accounts()
   end
 end
 
+
+local function check_groups()
+  local readme = lib.read_readme()
+  if not readme.groups then return end
+
+  local existing = {}
+  local content = lib.read_file("/etc/group") or ""
+  for line in (content .. "\n"):gmatch("([^\n]*)\n") do
+    local name, members = line:match("^([^:]+):[^:]*:[^:]*:(.*)$")
+    if name then
+      existing[name] = {}
+      for m in members:gmatch("[^,%s]+") do existing[name][m] = true end
+    end
+  end
+
+  local names = {}
+  for name in pairs(readme.groups) do table.insert(names, name) end
+  table.sort(names)
+
+  for _, group in ipairs(names) do
+    if not existing[group] then
+      lib.log("addgroup " .. group, "Create group: " .. group)
+    end
+    for _, user in ipairs(readme.groups[group]) do
+      if not (existing[group] and existing[group][user]) then
+        -- -a (append) rather than -M, which would overwrite existing members
+        lib.log("gpasswd -a " .. user .. " " .. group, "Add " .. user .. " to group " .. group)
+      end
+    end
+  end
+end
+
 function M.check_users()
   check_uid_zero()
   check_blank_passwords()
   check_pam_backdoors()
   check_accounts()
+  check_groups()
 end
 
 return M

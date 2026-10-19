@@ -2,11 +2,11 @@ local lib = require("lib")
 local slib = require("services.lib")
 
 BAD_SERVICES = {
-  "squid.service"
+  "squid"
 }
 local function check_bad_services()
-  for _, srv in ipairs(slib.list_services()) do
-    if lib.contains(BAD_SERVICES, srv) then
+  for _, srv in ipairs(BAD_SERVICES) do
+    if slib.service_installed(srv) then
       slib.disable_service(srv)
     end
   end

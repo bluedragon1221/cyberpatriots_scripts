@@ -3,6 +3,7 @@ local lib = require("lib")
 local M = {}
 
 function M.check_cron()
+  if not lib.file_exists("/etc/crontab") then return end
   for i, line in lib.enumerate(io.lines("/etc/crontab")) do
     local words = {}
     local cmd = line:match("^%s*%S+%s+%S+%s+%S+%s+%S+%s+%S+%s+(.+)$")

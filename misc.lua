@@ -12,43 +12,73 @@ function M.check_harmful_files()
     end
   end
 
-  local games_check = io.popen("test -d /usr/games && [ \"$(ls -A /usr/games 2>/dev/null)\" ] && echo 'yes'")
-  if games_check then
-    local result = games_check:read("*l")
-    games_check:close()
-    if result == "yes" then
-      lib.log("rm -rf /usr/games/*", "Remove any game files")
+  local listing = lib.capture("find /usr/games -mindepth 1 -maxdepth 1 ! -type d 2>/dev/null")
+  for path in listing:gmatch("[^\r\n]+") do
+    if not lib.run_ok("dpkg -S " .. lib.shell_quote(path) .. " >/dev/null 2>&1") then
+      lib.log("rm -f " .. lib.shell_quote(path), "Remove unpackaged file in /usr/games: " .. path)
     end
   end
 end
 
-function set_sysctl(opt, old_val, new_val)
-  local pipe = io.open("/etc/sysctl.conf", "r")
-  for line in pipe:lines() do
-    if line:match("^"..opt.."%s*=%s*"..old_val.."$") then
-      lib.log("sed -i 's/^"..opt.."\\s*=\\s*"..old_val.."$/"..opt.."="..new_val.."/' /etc/sysctl.conf", "Toggle "..opt.." in sysctl")
-      lib.log("sysctl -p", "Reload sysctl")
-    end
+local function check_sysctl_key(key, want)
+  local runtime = lib.read_file("/proc/sys/" .. key:gsub("%.", "/"))
+  runtime = runtime and runtime:match("^%s*(.-)%s*$")
+
+  local key_re = key:gsub("%.", "[.]")
+  local grep = lib.capture("grep -HsE '^[[:space:]]*" .. key_re .. "[[:space:]]*=' /etc/sysctl.conf /etc/sysctl.d/*.conf 2>/dev/null")
+
+  local bad_files = {}
+  for file, val in grep:gmatch("([^:\r\n]+):[^=\r\n]*=%s*([^\r\n]-)%s*\r?\n") do
+    if val ~= want then bad_files[file] = true end
   end
+
+  if runtime == want and next(bad_files) == nil then return false end
+
+  local files = {}
+  for f in pairs(bad_files) do table.insert(files, f) end
+  table.sort(files)
+  if #files == 0 then files = { "/etc/sysctl.conf" } end
+
+  for _, f in ipairs(files) do
+    lib.log(lib.set_directive(f, key, want, "="), "Set " .. key .. "=" .. want .. " in " .. f .. " (runtime was " .. (runtime or "?") .. ")")
+  end
+  return true
 end
 
 function M.check_sysctl()
-  set_sysctl("net.ipv4.tcp_syncookies", "0", "1")
-  set_sysctl("net.ipv4.ip_forward", "1", "0")
+  local changed = false
+  changed = check_sysctl_key("net.ipv4.tcp_syncookies", "1") or changed
+  changed = check_sysctl_key("net.ipv4.ip_forward", "0") or changed
+  if changed then
+    lib.log("sysctl --system", "Apply sysctl settings")
+  end
 end
 
+local SERVICE_PORTS = {
+  vsftpd = "21/tcp",
+  nginx = "80,443/tcp",
+  apache2 = "80,443/tcp",
+}
+
 function M.check_firewall()
-  -- make sure ufw is installed
   if not lib.contains(lib.list_installed_packages(), "ufw") then
-    lib.log("apt install ufw", "Install package: ufw")
+    lib.log("apt install -y ufw", "Install package: ufw")
+  elseif lib.capture("ufw status 2>/dev/null"):match("Status: active") then
+    return
   end
 
-  local pipe = io.open("/etc/ufw/ufw.conf")
-  for line in pipe:lines() do
-    if line:match("^ENABLED=no$") then
-      lib.log("ufw enable", "Enable firewall")
+  local readme = lib.read_readme()
+  if lib.file_exists("/etc/ssh/sshd_config") then
+    lib.log("ufw allow 22/tcp", "Keep SSH reachable before enabling the firewall")
+  end
+  for service, ports in pairs(SERVICE_PORTS) do
+    if readme.services and readme.services[service] then
+      lib.log("ufw allow " .. ports, "Keep required service reachable: " .. service)
     end
   end
+
+  -- --force: plain `ufw enable` stops to ask "may disrupt ssh connections, proceed?"
+  lib.log("ufw --force enable", "Enable firewall")
 end
 
 function M.check_guest_login()

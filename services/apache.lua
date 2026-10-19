@@ -27,7 +27,7 @@ local function audit_apache_security_conf()
 
     if cur_val ~= target_val then
       lib.log(
-        "sed -i -E 's/^[#%s]*(" .. key .. ")\\s+.*/\\1 " .. target_val .. "/' " .. target_file,
+        lib.set_directive(target_file, key, target_val, " "),
         "Apache setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")"
       )
     end

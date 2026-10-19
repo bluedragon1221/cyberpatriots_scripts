@@ -16,8 +16,8 @@ local function audit_sshd_directive(config_text, key, expected_value)
   end
 
   if not current_value or current_value:lower() ~= expected_value:lower() then
-    local fix_cmd = "sed -i -E 's/^[#%s]*(" .. key .. ")[%s].*/\\1 " .. expected_value .. "/I' " .. SSHD_CONFIG
-    lib.log(fix_cmd, "sshd setting '" .. key .. "' should be '" .. expected_value .. "' (Currently: " .. (current_value or "unset/default") .. ")")
+    lib.log(lib.set_directive(SSHD_CONFIG, key, expected_value, " "),
+      "sshd setting '" .. key .. "' should be '" .. expected_value .. "' (Currently: " .. (current_value or "unset/default") .. ")")
   end
 end
 
@@ -37,7 +37,7 @@ SSHD_OPTIONS = {
 local M = {}
 
 function M.check_sshd()
-  if slib.service_installed("sshd") then
+  if lib.file_exists(SSHD_CONFIG) then
     local config_text = lib.read_file(SSHD_CONFIG)
     if not config_text then
       lib.log(nil, "Can't find sshd config file, skipping ssh checks")

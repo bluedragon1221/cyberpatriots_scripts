@@ -114,4 +114,48 @@ function M.read_file_to_lines(f)
   end
 end
 
+function M.file_exists(path)
+  local f = io.open(path, "r")
+  if f then f:close() return true end
+  return false
+end
+
+-- Quote a string for safe use inside a single-quoted shell argument
+function M.shell_quote(s)
+  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
+
+-- Run a command, return true if it exited 0
+function M.run_ok(cmd)
+  local ok = os.execute(cmd)
+  return ok == true or ok == 0
+end
+
+-- Run a command, return everything it printed
+function M.capture(cmd)
+  local p = io.popen(cmd, "r")
+  if not p then return "" end
+  local out = p:read("*a")
+  p:close()
+  return out or ""
+end
+
+-- Build ONE idempotent shell command that makes `key<sep>value` true in a config file:
+--   * rewrites every existing (commented or not) `key` line, or
+--   * appends the line if the key isn't there at all.
+-- sep is the literal separator: " " (sshd/apache style), "=" or " = ".
+-- Uses POSIX classes, never line numbers, so it survives other commands rewriting the file first.
+function M.set_directive(file, key, value, sep)
+  sep = sep or " "
+  local key_re = key:gsub("%.", "[.]")
+  local sep_re = sep:find("=", 1, true) and "[[:space:]]*=" or "[[:space:]]"
+  local match = "^[[:space:]]*#?[[:space:]]*" .. key_re .. sep_re
+  local line = key .. sep .. value
+  local f = M.shell_quote(file)
+  return string.format("grep -qiE %s %s && sed -i --follow-symlinks -E %s %s || echo %s >> %s",
+    M.shell_quote(match), f,
+    M.shell_quote("s/" .. match .. ".*/" .. line .. "/I"), f,
+    M.shell_quote(line), f)
+end
+
 return M

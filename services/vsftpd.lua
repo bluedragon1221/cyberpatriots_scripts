@@ -33,7 +33,7 @@ local function audit_vsftpd_conf()
 
     if cur_val ~= target_val then
       lib.log(
-        "sed -i -E 's/^[#%s]*(" .. key .. ")\\s*=.*/\\1=" .. target_val .. "/' " .. VSFTPD_CONF,
+        lib.set_directive(VSFTPD_CONF, key, target_val, "="),
         "vsftpd setting '" .. key .. "' should be " .. target_val .. " (Currently: " .. (cur_val or "unset") .. ")"
       )
     end
