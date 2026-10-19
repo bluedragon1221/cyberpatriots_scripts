@@ -58,6 +58,7 @@ local SERVICE_PORTS = {
   vsftpd = "21/tcp",
   nginx = "80,443/tcp",
   apache2 = "80,443/tcp",
+  samba = "Samba",  -- ufw application profile shipped by the samba package
 }
 
 function M.check_firewall()

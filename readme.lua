@@ -11,7 +11,8 @@ return {
   services = {
     vsftpd = false,
     nginx = false,
-    apache2 = false
+    apache2 = false,
+    samba = false
   },
 
   -- packages the README says to keep even though they're on the "hacking tools" list
