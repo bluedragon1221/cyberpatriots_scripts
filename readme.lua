@@ -1,13 +1,11 @@
 return {
-  admins = {},
-  users = {},
+  admins = { "pparker", "tstark", "ppotts", "hhogan", "nfury", "mhill", "pcoulson" },
+  users = { "bbanner", "swilson", "sstrange", "slang", "cdanvers", "okoye", "kbishop", "ybelova", "jfoster", "nleeds", "mjwatson", "jtorres", "pcarter" },
 
-  -- group name -> members it should have (created if missing)
   groups = {
     -- spider = { "nova", "rowan", "finn", "quinn" },
   },
 
-  -- required services: true = keep + harden, false/absent = disable if installed
   services = {
     vsftpd = false,
     nginx = false,
@@ -15,8 +13,5 @@ return {
     samba = false
   },
 
-  -- packages the README says to keep even though they're on the "hacking tools" list
-  software = {
-    -- "wireshark", "ophcrack",
-  },
+  software = {},
 }
